@@ -1514,6 +1514,49 @@ static void config_spatial_stream_index(const paramdef_t *param, const size_t np
   }
 }
 
+/** @brief Read slicing RRM policies of MACRLCs.[idx]
+ * @param[out] policies array of NR_MAX_SLICES policies to fill
+ * @return number of policies read */
+static int config_slicing(int idx, nr_slice_policy_t policies[NR_MAX_SLICES])
+{
+  char prefix[MAX_OPTNAME_SIZE * 2 + 8];
+  snprintf(prefix, sizeof(prefix), "%s.[%d]", MACRLC_LIST, idx);
+  GET_PARAMS_LIST(SlicingParamList, SlicingParams, MACRLC_SLICINGPARAMS_DESC, MACRLC_SLICING_LIST, prefix);
+  const int np = sizeofArray(SlicingParams);
+  const int n = SlicingParamList.numelt;
+  AssertFatal(n <= NR_MAX_SLICES, "%s: %d slices configured, maximum is %d\n", prefix, n, NR_MAX_SLICES);
+
+  for (int i = 0; i < n; ++i) {
+    paramdef_t *params = SlicingParamList.paramarray[i];
+    nr_slice_policy_t *p = &policies[i];
+    p->resource_type = config_get_processedint(config_get_if(), (paramdef_t *)gpd(params, np, MACRLC_SLICING_RESOURCE_TYPE));
+    p->dedicated_ratio = *gpd(params, np, MACRLC_SLICING_DEDICATED_RATIO)->dblptr;
+    p->min_ratio = *gpd(params, np, MACRLC_SLICING_MIN_RATIO)->dblptr;
+    p->max_ratio = *gpd(params, np, MACRLC_SLICING_MAX_RATIO)->dblptr;
+    seq_arr_init(&p->members, sizeof(nr_slice_policy_member_t));
+
+    char mprefix[MAX_OPTNAME_SIZE * 4 + 16];
+    snprintf(mprefix, sizeof(mprefix), "%s.%s.[%d]", prefix, MACRLC_SLICING_LIST, i);
+    GET_PARAMS_LIST(PLMNParamList, PLMNParams, GNBPLMNPARAMS_DESC, MACRLC_SLICING_POLICY_MEMBER_LIST, mprefix, PLMNPARAMS_CHECK);
+    GET_PARAMS_LIST(SNSSAIParamList,
+                    SNSSAIParams,
+                    GNBSNSSAIPARAMS_DESC,
+                    MACRLC_SLICING_POLICY_MEMBER_LIST,
+                    mprefix,
+                    SNSSAIPARAMS_CHECK);
+    DevAssert(PLMNParamList.numelt == SNSSAIParamList.numelt);
+    // TODO can be many??
+    for (int m = 0; m < PLMNParamList.numelt; ++m) {
+      nr_slice_policy_member_t pm = {
+          .plmn = extract_plmn_from_params(PLMNParamList.paramarray[m], sizeofArray(PLMNParams)),
+          .nssai = extract_nssai_from_params(SNSSAIParamList.paramarray[m], sizeofArray(SNSSAIParams)),
+      };
+      seq_arr_push_back(&p->members, &pm, sizeof(pm));
+    }
+  }
+  return n;
+}
+
 void RCconfig_nr_macrlc(configmodule_interface_t *cfg, nr_cell_sched_t **out_cell)
 {
   int j = 0;
@@ -1843,6 +1886,11 @@ void RCconfig_nr_macrlc(configmodule_interface_t *cfg, nr_cell_sched_t **out_cel
 
       // Read spatial stream indices
       config_spatial_stream_index(params, np, &cell->radio_config, num_tx);
+
+      // Read per-cell slice policies
+      nr_slice_policy_t policies[NR_MAX_SLICES];
+      const int n_slices = config_slicing(j, policies);
+      LOG_A(NR_MAC, "read %d slices\n", n_slices);
 
       // triggers also PHY initialization in case we have L1 via FAPI
       nr_mac_config_scc(nrmac, cell, scc, &config);
