@@ -5,6 +5,8 @@
 #include "slicing.h"
 #include <stdlib.h>
 #include "NR_MAC_gNB/nr_mac_gNB.h"
+#include "NR_MAC_gNB/gNB_scheduler_dlsch_default_policies.h"
+#include "NR_MAC_gNB/gNB_scheduler_ulsch_default_policies.h"
 
 static const char *resource_type_str[] = {"both", "dl", "ul"};
 
@@ -154,4 +156,17 @@ const nr_slice_policy_t *get_slice_by_id(const nr_cell_sched_t *cell, uint32_t i
 {
   const nr_slice_policy_t key = {.id = id};
   return bsearch(&key, seq_arr_front(&cell->slices), seq_arr_size(&cell->slices), sizeof(key), cmp_slice_id);
+}
+
+/** @brief DL RB allocation with fixed slice partitioning: each DL slice reserves minRatio of
+ * the RBs in every slot, in order of slices; UEs without slice share the remaining RBs. Within
+ * each partition, nr_dl_proportional_fair() allocates RBs to the slice's UEs. */
+int nr_dl_slicing_fixed(const nr_dl_sched_params_t *params, nr_dl_candidate_t *candidates, int n_candidates)
+{
+  return nr_dl_proportional_fair(params, candidates, n_candidates);
+}
+
+int nr_ul_slicing_fixed(const nr_ul_sched_params_t *params, nr_ul_candidate_t *candidates, int n_candidates)
+{
+  return nr_ul_proportional_fair(params, candidates, n_candidates);
 }

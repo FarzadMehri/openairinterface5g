@@ -39,6 +39,10 @@ typedef struct nr_slice_policy_s {
 
 struct nr_cell_sched_s;
 struct NR_UEs_s;
+struct nr_dl_sched_params;
+struct nr_dl_candidate;
+struct nr_ul_sched_params;
+struct nr_ul_candidate;
 
 bool add_slice(struct nr_cell_sched_s *cell, const nr_slice_policy_t *policy);
 bool remove_slice(const struct NR_UEs_s *UEs, struct nr_cell_sched_s *cell, nr_slice_policy_t *slice);
@@ -47,5 +51,8 @@ const nr_slice_policy_t *get_slice(const struct nr_cell_sched_s *cell,
                                    const nssai_t *nssai,
                                    nr_slice_resource_type_t dir);
 const nr_slice_policy_t *get_slice_by_id(const struct nr_cell_sched_s *cell, uint32_t id);
+
+int nr_dl_slicing_fixed(const struct nr_dl_sched_params *params, struct nr_dl_candidate *candidates, int n_candidates);
+int nr_ul_slicing_fixed(const struct nr_ul_sched_params *params, struct nr_ul_candidate *candidates, int n_candidates);
 
 #endif /* NR_MAC_GNB_SLICING_H_ */

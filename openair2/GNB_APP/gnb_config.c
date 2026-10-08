@@ -1896,6 +1896,11 @@ void RCconfig_nr_macrlc(configmodule_interface_t *cfg, nr_cell_sched_t **out_cel
         AssertFatal(success, "%s.[%d].%s.[%d]: slice not admitted, check configuration\n", MACRLC_LIST, j, MACRLC_SLICING_LIST, i);
         seq_arr_free(&policies[i].members, NULL);
       }
+      if (seq_arr_size(&cell->slices) > 0) {
+        LOG_I(NR_MAC, "slices configured, using slice scheduler\n");
+        nrmac->dl_rb_alloc = nr_dl_slicing_fixed;
+        nrmac->ul_rb_alloc = nr_ul_slicing_fixed;
+      }
 
       // triggers also PHY initialization in case we have L1 via FAPI
       nr_mac_config_scc(nrmac, cell, scc, &config);
