@@ -46,5 +46,6 @@ const nr_slice_policy_t *get_slice(const struct nr_cell_sched_s *cell,
                                    const plmn_id_t *plmn,
                                    const nssai_t *nssai,
                                    nr_slice_resource_type_t dir);
+const nr_slice_policy_t *get_slice_by_id(const struct nr_cell_sched_s *cell, uint32_t id);
 
 #endif /* NR_MAC_GNB_SLICING_H_ */

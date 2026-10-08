@@ -3,6 +3,7 @@
  */
 
 #include "slicing.h"
+#include <stdlib.h>
 #include "NR_MAC_gNB/nr_mac_gNB.h"
 
 static const char *resource_type_str[] = {"both", "dl", "ul"};
@@ -62,6 +63,9 @@ bool add_slice(nr_cell_sched_t *cell, const nr_slice_policy_t *policy)
 
   nr_slice_policy_t s = *policy;
   s.id = ++cell->last_slice_id;
+  // slices are sorted by ID for get_slice_by_id()
+  const size_t n = seq_arr_size(&cell->slices);
+  DevAssert(n == 0 || ((nr_slice_policy_t *)seq_arr_at(&cell->slices, n - 1))->id < s.id);
   seq_arr_init(&s.members, sizeof(nr_slice_policy_member_t));
   for (int m = 0; m < seq_arr_size(&policy->members); ++m)
     seq_arr_push_back(&s.members, seq_arr_at(&policy->members, m), sizeof(nr_slice_policy_member_t));
@@ -135,4 +139,19 @@ const nr_slice_policy_t *get_slice(const nr_cell_sched_t *cell,
     }
   }
   return NULL;
+}
+
+static int cmp_slice_id(const void *a, const void *b)
+{
+  const uint32_t id_a = ((const nr_slice_policy_t *)a)->id;
+  const uint32_t id_b = ((const nr_slice_policy_t *)b)->id;
+  return (id_a > id_b) - (id_a < id_b);
+}
+
+/** @brief Get the slice with ID id
+ * @return the slice, or NULL if none */
+const nr_slice_policy_t *get_slice_by_id(const nr_cell_sched_t *cell, uint32_t id)
+{
+  const nr_slice_policy_t key = {.id = id};
+  return bsearch(&key, seq_arr_front(&cell->slices), seq_arr_size(&cell->slices), sizeof(key), cmp_slice_id);
 }
