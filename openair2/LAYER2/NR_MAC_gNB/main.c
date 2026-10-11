@@ -291,6 +291,7 @@ void mac_top_init_gNB(ngran_node_t node_type,
         cell->sib1_pdsch[n].time_domain_allocation = -1;
       cell->common_channels.ServingCellConfigCommon = scc;
       cell->radio_config = *config;
+      seq_arr_init(&cell->slices, sizeof(nr_slice_policy_t));
       RC.nrmac[i]->rlc_config = *default_rlc_config;
 
       cell->first_MIB = true;
@@ -356,6 +357,18 @@ void mac_top_init_gNB(ngran_node_t node_type,
 
 void mac_top_destroy_gNB(gNB_MAC_INST *mac)
 {
+  // delete UEs first, as slices can only be removed without associated UEs
+  NR_UEs_t *UE_info = &mac->UE_info;
+  for (int i = 0; i < sizeofArray(UE_info->connected_ue_list); ++i) {
+    if (UE_info->connected_ue_list[i])
+      delete_nr_ue_data(UE_info->connected_ue_list[i], &UE_info->uid_allocator);
+    UE_info->connected_ue_list[i] = NULL;
+  }
+  for (int i = 0; i < sizeofArray(UE_info->access_ue_list); ++i) {
+    if (UE_info->access_ue_list[i])
+      delete_nr_ue_data(UE_info->access_ue_list[i], &UE_info->uid_allocator);
+    UE_info->access_ue_list[i] = NULL;
+  }
   for (size_t i = 0; i < sizeofArray(mac->cells); i++) {
     nr_cell_sched_t *cell = &mac->cells[i];
     free(cell->radio_config.bw_list);
@@ -366,17 +379,15 @@ void mac_top_destroy_gNB(gNB_MAC_INST *mac)
     ASN_STRUCT_FREE(asn_DEF_NR_BCCH_BCH_Message, cc->mib);
     ASN_STRUCT_FREE(asn_DEF_NR_BCCH_DL_SCH_Message, cc->sib1);
     ASN_STRUCT_FREE(asn_DEF_NR_ServingCellConfigCommon, cc->ServingCellConfigCommon);
+    while (seq_arr_size(&cell->slices) > 0) {
+      bool removed = remove_slice(UE_info, cell, seq_arr_front(&cell->slices));
+      DevAssert(removed);
+    }
+    seq_arr_free(&cell->slices, NULL);
 #ifdef E3_AGENT
     e3_spectrum_mac_detach_cell(cell);
 #endif /* E3_AGENT */
   }
-  NR_UEs_t *UE_info = &mac->UE_info;
-  for (int i = 0; i < sizeofArray(UE_info->connected_ue_list); ++i)
-    if (UE_info->connected_ue_list[i])
-      delete_nr_ue_data(UE_info->connected_ue_list[i], &UE_info->uid_allocator);
-  for (int i = 0; i < sizeofArray(UE_info->access_ue_list); ++i)
-    if (UE_info->access_ue_list[i])
-      delete_nr_ue_data(UE_info->access_ue_list[i], &UE_info->uid_allocator);
   if (mac->f1_config.setup_resp)
     free_f1ap_setup_response(mac->f1_config.setup_resp);
   free(mac->f1_config.setup_resp);

@@ -1891,6 +1891,11 @@ void RCconfig_nr_macrlc(configmodule_interface_t *cfg, nr_cell_sched_t **out_cel
       nr_slice_policy_t policies[NR_MAX_SLICES];
       const int n_slices = config_slicing(j, policies);
       LOG_A(NR_MAC, "read %d slices\n", n_slices);
+      for (int i = 0; i < n_slices; ++i) {
+        bool success = add_slice(cell, &policies[i]);
+        AssertFatal(success, "%s.[%d].%s.[%d]: slice not admitted, check configuration\n", MACRLC_LIST, j, MACRLC_SLICING_LIST, i);
+        seq_arr_free(&policies[i].members, NULL);
+      }
 
       // triggers also PHY initialization in case we have L1 via FAPI
       nr_mac_config_scc(nrmac, cell, scc, &config);

@@ -869,7 +869,7 @@ typedef struct NR_UE_info {
   bool nrdc_mode;
 } NR_UE_info_t;
 
-typedef struct {
+typedef struct NR_UEs_s {
   /// scheduling control info
   // last element always NULL
   NR_UE_info_t *connected_ue_list[MAX_MOBILES_PER_GNB + 1];
@@ -1299,6 +1299,11 @@ typedef struct nr_cell_sched_s {
 
   /// Optional opaque state for stateful custom scheduling policies
   void *sched_stateful_data;
+
+  /// Admitted slices, list of nr_slice_policy_t
+  seq_arr_t slices;
+  /// ID of the last added slice
+  uint32_t last_slice_id;
 
   /// Per-cell KPI statistics
   NR_du_stats_t du_stats;
