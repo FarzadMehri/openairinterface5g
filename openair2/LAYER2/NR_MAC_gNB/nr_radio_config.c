@@ -1569,7 +1569,7 @@ long ue_supported_ul_layers(const NR_UE_NR_Capability_t *uecap)
       && uecap->featureSets->featureSetsUplinkPerCC
       && uecap->featureSets->featureSetsUplinkPerCC->list.count > 0) {
     NR_FeatureSetUplinkPerCC_t *ul_feature_setup_per_cc = uecap->featureSets->featureSetsUplinkPerCC->list.array[0];
-    if (ul_feature_setup_per_cc->mimo_CB_PUSCH->maxNumberMIMO_LayersCB_PUSCH) {
+    if (ul_feature_setup_per_cc->mimo_CB_PUSCH && ul_feature_setup_per_cc->mimo_CB_PUSCH->maxNumberMIMO_LayersCB_PUSCH) {
       switch (*ul_feature_setup_per_cc->mimo_CB_PUSCH->maxNumberMIMO_LayersCB_PUSCH) {
         case NR_MIMO_LayersUL_twoLayers:
           ul_max_layers = 2;
